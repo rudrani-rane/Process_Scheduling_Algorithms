@@ -33,18 +33,6 @@ Gantt Chart: Dynamically generated using custom CSS and JavaScript
 Package Manager: pip
 
 
-## Project Structure
-/process-scheduling-web-app
-│
-├── app.py                    # Flask backend logic
-├── /templates
-│   └── index.html            # Main frontend page
-├── /static
-│   ├── style.css             # Custom CSS styles
-│   └── script.js             # JavaScript to handle form submissions and results
-└── README.md                 # Project documentation
-
-
 ## Installation
 Clone the repository: git clone <repository-url>
 Navigate to the project directory: cd process-scheduling-web-app
