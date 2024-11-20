@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Visualizer</title>
+    <link rel="stylesheet" href="static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>CPU Scheduling Algorithm Visualizer</h1>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <table class="process-table">
+                    <thead>
+                        <tr>
+                            <th>Process ID</th>
+                            <th>Burst Time</th>
+                            <th>Arrival Time</th>
+                            <th>Priority</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inputTableBody"></tbody>
+                </table>
+
+                <button id="addProcessBtn" class="btn btn-add">Add Process</button>
+            </div>
+
+            <div class="controls">
+                <label for="algorithm">Algorithm:</label>
+                <select id="algorithm" class="dropdown">
+                    <option value="FCFS">First Come First Serve</option>
+                    <option value="SJF">Shortest Job First</option>
+                    <option value="Priority">Priority</option>
+                    <option value="Round Robin">Round Robin</option>
+                </select>
+                <input id="quantum" type="number" placeholder="Quantum (if RR)" class="input-small" style="display: none;">
+                <button id="evaluateBtn" class="btn btn-evaluate">Evaluate</button>
+            </div>
+
+            <div class="output-section" id="results" style="display: none;">
+                <h2>Results</h2>
+                <table class="process-table">
+                    <thead>
+                        <tr>
+                            <th>Process ID</th>
+                            <th>Arrival Time</th>
+                            <th>Burst Time</th>
+                            <th>Priority</th>
+                            <th>Waiting Time</th>
+                            <th>Turnaround Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody"></tbody>
+                </table>
+
+                <h3>Gantt Chart</h3>
+                <div id="ganttChart" class="gantt-chart"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let processCounter = 1;
+
+        // Add Process Row
+        document.getElementById('addProcessBtn').addEventListener('click', function () {
+            const tableBody = document.getElementById('inputTableBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>P${processCounter}</td>
+                <td><input type="number" class="burst-time" placeholder="Burst"></td>
+                <td><input type="number" class="arrival-time" placeholder="Arrival"></td>
+                <td><input type="number" class="priority" placeholder="Priority"></td>
+                <td><button class="btn btn-delete">Delete</button></td>
+            `;
+            tableBody.appendChild(row);
+            processCounter++;
+
+            // Add delete functionality
+            row.querySelector('.btn-delete').addEventListener('click', () => row.remove());
+        });
+
+        // Show/Hide Quantum Field
+        document.getElementById('algorithm').addEventListener('change', function () {
+            const quantumField = document.getElementById('quantum');
+            if (this.value === 'Round Robin') {
+                quantumField.style.display = 'inline-block';
+            } else {
+                quantumField.style.display = 'none';
+            }
+        });
+
+        // Evaluate Algorithm
+        document.getElementById('evaluateBtn').addEventListener('click', async function () {
+            const algorithm = document.getElementById('algorithm').value;
+            const quantum = document.getElementById('quantum').value || 0;
+
+            const burstTimes = [];
+            const arrivalTimes = [];
+            const priorities = [];
+            const processIds = [];
+
+            document.querySelectorAll('#inputTableBody tr').forEach((row, index) => {
+                const burst = parseInt(row.querySelector('.burst-time').value) || 0;
+                const arrival = parseInt(row.querySelector('.arrival-time').value) || 0;
+                const priority = parseInt(row.querySelector('.priority').value) || 0;
+
+                burstTimes.push(burst);
+                arrivalTimes.push(arrival);
+                priorities.push(priority);
+                processIds.push(`P${index + 1}`);
+            });
+
+            try {
+                const response = await axios.post('/calculate', {
+                    algorithm,
+                    burst_times: burstTimes,
+                    arrival_times: arrivalTimes,
+                    quantum,
+                    priorities
+                });
+
+                const { waiting_time, turnaround_time, gantt_chart } = response.data;
+
+                // Display results
+                const resultTableBody = document.getElementById('resultTableBody');
+                resultTableBody.innerHTML = '';
+                processIds.forEach((pid, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${pid}</td>
+                        <td>${arrivalTimes[index]}</td>
+                        <td>${burstTimes[index]}</td>
+                        <td>${priorities[index]}</td>
+                        <td>${waiting_time[index]}</td>
+                        <td>${turnaround_time[index]}</td>
+                    `;
+                    resultTableBody.appendChild(row);
+                });
+
+                // Display Gantt Chart
+                const ganttChartDiv = document.getElementById('ganttChart');
+                ganttChartDiv.innerHTML = '';
+                gantt_chart.forEach(segment => {
+                    const ganttSegment = document.createElement('div');
+                    ganttSegment.className = 'gantt-segment';
+                    ganttSegment.style.width = `${segment.end - segment.start}rem`;
+                    ganttSegment.textContent = `${segment.process} (${segment.start}-${segment.end})`;
+                    ganttChartDiv.appendChild(ganttSegment);
+                });
+
+                document.getElementById('results').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
+
